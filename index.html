@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Cinema Picker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Limelight&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --neon-gold: #ffd700;
+            --neon-red: #ff4d4d;
+            --screen-bg: #111;
+            --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+
+        body {
+            background-color: #050505;
+            color: #e0e0e0;
+            font-family: 'Share Tech Mono', monospace;
+            background-image: var(--grain);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        h1, h2, .retro-font {
+            font-family: 'Limelight', cursive;
+            letter-spacing: 2px;
+        }
+
+        /* CRT Effect Overlay */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 5px var(--neon-gold), 0 0 10px var(--neon-gold);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-gold);
+        }
+
+        /* Button Effects */
+        .btn-retro {
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-retro:active {
+            transform: scale(0.95);
+        }
+
+        .marquee-container {
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            background: #111;
+            padding: 5px 0;
+        }
+        
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid var(--neon-gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="crt relative">
+
+    <!-- Header -->
+    <header class="w-full p-4 flex justify-between items-center border-b border-gray-800 bg-black/50 z-10 backdrop-blur-sm">
+        <div class="flex items-center gap-2">
+            <i data-lucide="film" class="text-yellow-500 w-8 h-8"></i>
+            <h1 class="text-2xl md:text-3xl text-yellow-500 glow-text">CINE-MATIC</h1>
+        </div>
+        <div class="flex gap-4">
+             <div id="api-status" class="hidden md:flex items-center gap-2 text-xs text-gray-500 border border-gray-800 px-2 rounded">
+                <div class="w-2 h-2 rounded-full bg-gray-500" id="api-light"></div>
+                <span id="api-text">LOCAL DB</span>
+            </div>
+            <button onclick="toggleView('watchlist')" class="flex items-center gap-2 text-sm hover:text-yellow-400 transition-colors">
+                <i data-lucide="list-video" class="w-5 h-5"></i>
+                <span class="hidden md:inline">MY WATCHLIST</span>
+                <span id="watchlist-count" class="bg-yellow-600 text-black text-xs font-bold px-1.5 py-0.5 rounded">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow flex flex-col items-center justify-center p-4 w-full max-w-4xl mx-auto z-10 relative">
+
+        <!-- Initial Start View -->
+        <div id="start-view" class="text-center space-y-8 animate-fade-in">
+            <div class="border-4 border-double border-yellow-600 p-8 rounded-lg bg-black/40 backdrop-blur">
+                <h2 class="text-4xl md:text-6xl text-white mb-4">TONIGHT'S FEATURE?</h2>
+                <p class="text-gray-400 mb-8 text-lg">Let fate decide your next cinematic experience.</p>
+                <button onclick="startPicker()" class="btn-retro bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-4 px-10 rounded text-xl shadow-[0_0_15px_rgba(202,138,4,0.5)]">
+                    PICK A MOVIE
+                </button>
+            </div>
+            
+            <div class="flex gap-4 justify-center text-xs text-gray-500 uppercase tracking-widest">
+                <div><span id="stat-total">0</span> Database</div> •
+                <div><span id="stat-seen">0</span> Watched</div>
+            </div>
+        </div>
+
+        <!-- Loading View -->
+        <div id="loading-view" class="hidden flex flex-col items-center gap-4">
+            <div class="loader"></div>
+            <p id="loading-text" class="text-yellow-500 text-sm blink">Thinking...</p>
+        </div>
+
+        <!-- Movie Card View (Hidden by default) -->
+        <div id="movie-view" class="hidden w-full max-w-3xl animate-fade-in">
+            
+            <div class="bg-[#1a1a1a] border border-gray-700 rounded-lg overflow-hidden shadow-2xl flex flex-col md:flex-row relative">
+                
+                <!-- Poster Area -->
+                <div class="md:w-1/3 relative h-96 md:h-auto bg-black flex items-center justify-center overflow-hidden group">
+                    <img id="movie-poster" src="" alt="Movie Poster" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent md:bg-gradient-to-r"></div>
+                    <!-- Genre Tag -->
+                    <span id="movie-genre" class="absolute top-2 left-2 bg-black/80 text-yellow-500 text-xs px-2 py-1 border border-yellow-500/30 rounded">Genre</span>
+                    <!-- Year Tag -->
+                    <span id="movie-year" class="absolute top-2 right-2 bg-white/10 text-white text-xs px-2 py-1 rounded">Year</span>
+                </div>
+
+                <!-- Details Area -->
+                <div class="md:w-2/3 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between mb-2">
+                            <h2 id="movie-title" class="text-2xl md:text-3xl text-white leading-tight font-bold">Movie Title</h2>
+                            <div class="flex items-center text-yellow-500 gap-1 shrink-0 ml-2">
+                                <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                                <span id="movie-rating" class="text-lg">0.0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="h-px w-full bg-gradient-to-r from-yellow-600/50 to-transparent my-4"></div>
+                        
+                        <div class="overflow-y-auto max-h-48 pr-2 custom-scroll">
+                            <p id="movie-plot" class="text-gray-300 text-lg leading-relaxed mb-6">
+                                Movie description will appear here...
+                            </p>
+                        </div>
+                        
+                        <div class="text-sm text-gray-500 space-y-1 mb-6 mt-4">
+                            <p><span class="text-gray-400 uppercase">Director:</span> <span id="movie-director">See Credits</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Actions Panel -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-auto">
+                        <!-- Already Watched -->
+                        <button onclick="handleAction('watched')" class="btn-retro flex flex-col items-center justify-center p-3 bg-gray-800 hover:bg-green-900/40 border border-gray-700 hover:border-green-500 rounded text-gray-400 hover:text-green-400 transition-all">
+                            <i data-lucide="check" class="w-6 h-6 mb-1"></i>
+                            <span class="text-xs">Seen It</span>
+                        </button>
+                        
+                        <!-- Not Interested -->
+                        <button onclick="handleAction('skip')" class="btn-retro flex flex-col items-center justify-center p-3 bg-gray-800 hover:bg-red-900/40 border border-gray-700 hover:border-red-500 rounded text-gray-400 hover:text-red-400 transition-all">
+                            <i data-lucide="x" class="w-6 h-6 mb-1"></i>
+                            <span class="text-xs">Skip</span>
+                        </button>
+                        
+                        <!-- Watchlist -->
+                        <button onclick="handleAction('watchlist')" class="btn-retro flex flex-col items-center justify-center p-3 bg-gray-800 hover:bg-blue-900/40 border border-gray-700 hover:border-blue-500 rounded text-gray-400 hover:text-blue-400 transition-all">
+                            <i data-lucide="plus" class="w-6 h-6 mb-1"></i>
+                            <span class="text-xs">Watchlist</span>
+                        </button>
+
+                        <!-- Next -->
+                        <button onclick="pickRandomMovie()" class="btn-retro flex flex-col items-center justify-center p-3 bg-yellow-600 hover:bg-yellow-500 text-black border border-yellow-600 rounded shadow-lg">
+                            <i data-lucide="shuffle" class="w-6 h-6 mb-1"></i>
+                            <span class="text-xs font-bold">Pick Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="toggleView('start')" class="mt-8 text-gray-500 hover:text-white text-sm mx-auto block underline decoration-dotted">
+                &larr; Back to Home
+            </button>
+        </div>
+
+        <!-- Watchlist View -->
+        <div id="watchlist-view" class="hidden w-full max-w-4xl animate-fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl text-yellow-500">YOUR WATCHLIST</h2>
+                <button onclick="toggleView('start')" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x-circle" class="w-8 h-8"></i>
+                </button>
+            </div>
+            
+            <div id="watchlist-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Watchlist items injected here -->
+            </div>
+            
+            <div id="empty-watchlist-msg" class="hidden text-center py-20 text-gray-500 border-2 border-dashed border-gray-800 rounded">
+                <p>Your reel is empty.</p>
+                <button onclick="toggleView('start')" class="mt-4 text-yellow-600 hover:text-yellow-500">Go pick some movies</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Marquee -->
+    <footer class="marquee-container text-yellow-600/50 text-xs overflow-hidden z-10">
+        <div class="whitespace-nowrap animate-marquee px-4">
+            DATA STORED LOCALLY • POWERED BY TMDB • RETRO CINEMA V2.0 • ENJOY THE SHOW • 
+        </div>
+    </footer>
+
+    <!-- Logic -->
+    <script>
+        // ==========================================
+        // CONFIGURATION: API KEY
+        // ==========================================
+        // PASTE YOUR KEY HERE
+        
+        const TMDB_API_KEY = "e547e17d4e91f3e62a571655cd1ccaff"; 
+        
+        // ==========================================
+
+        // --- INTERNAL DATA (FALLBACK) ---
+        const localDatabase = [
+            { id: 1, title: "Blade Runner 2049", year: "2017", genre: "Sci-Fi", director: "Denis Villeneuve", rating: 8.0, plot: "Young Blade Runner K's discovery of a long-buried secret leads him to track down former Blade Runner Rick Deckard, who's been missing for thirty years.", poster: "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg" },
+            { id: 2, title: "Pulp Fiction", year: "1994", genre: "Crime", director: "Quentin Tarantino", rating: 8.9, plot: "The lives of two mob hitmen, a boxer, a gangster and his wife, and a pair of diner bandits intertwine in four tales of violence and redemption.", poster: "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg" },
+            { id: 3, title: "The Grand Budapest Hotel", year: "2014", genre: "Comedy", director: "Wes Anderson", rating: 8.1, plot: "A writer encounters the owner of an aging high-class hotel, who tells him of his early years serving as a lobby boy in the hotel's glorious years under an exceptional concierge.", poster: "https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg" },
+            { id: 4, title: "Spirited Away", year: "2001", genre: "Animation", director: "Hayao Miyazaki", rating: 8.6, plot: "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, and where humans are changed into beasts.", poster: "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUKGcl6620F5.jpg" },
+            { id: 5, title: "The Thing", year: "1982", genre: "Horror", director: "John Carpenter", rating: 8.2, plot: "A research team in Antarctica is hunted by a shape-shifting alien that assumes the appearance of its victims.", poster: "https://image.tmdb.org/t/p/w500/tzGY49kseSE9QLWzUBl7nBRaqcf.jpg" },
+            { id: 6, title: "In the Mood for Love", year: "2000", genre: "Romance", director: "Wong Kar-wai", rating: 8.1, plot: "Two neighbors, a woman and a man, form a strong bond after both suspect their extramarital activities of their spouses.", poster: "https://image.tmdb.org/t/p/w500/7qZl7T9jX2q7qX9j2q7qX9j2q7.jpg" },
+            { id: 7, title: "Parasite", year: "2019", genre: "Thriller", director: "Bong Joon Ho", rating: 8.5, plot: "Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan.", poster: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg" },
+            { id: 8, title: "Mad Max: Fury Road", year: "2015", genre: "Action", director: "George Miller", rating: 8.1, plot: "In a post-apocalyptic wasteland, a woman rebels against a tyrannical ruler in search for her homeland with the aid of a group of female prisoners, a psychotic worshiper, and a drifter named Max.", poster: "https://image.tmdb.org/t/p/w500/8tZYtuWezpScKdJvypVqX5g8y8u.jpg" },
+            { id: 9, title: "The Dark Knight", year: "2008", genre: "Action", director: "Christopher Nolan", rating: 9.0, plot: "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.", poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg" },
+            { id: 10, title: "Whiplash", year: "2014", genre: "Drama", director: "Damien Chazelle", rating: 8.5, plot: "A promising young drummer enrolls at a cut-throat music conservatory where his dreams of greatness are mentored by an instructor who will stop at nothing to realize a student's potential.", poster: "https://image.tmdb.org/t/p/w500/6uSPcdGNA2A6vJmCag5fQjm63Tj.jpg" },
+            { id: 11, title: "Alien", year: "1979", genre: "Horror", director: "Ridley Scott", rating: 8.5, plot: "The crew of a commercial spacecraft encounter a deadly lifeform after investigating an unknown transmission.", poster: "https://image.tmdb.org/t/p/w500/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg" },
+            { id: 12, title: "Casablanca", year: "1942", genre: "Romance", director: "Michael Curtiz", rating: 8.5, plot: "A cynical expatriate American cafe owner struggles to decide whether or not to help his former lover and her fugitive husband escape the Nazis in French Morocco.", poster: "https://image.tmdb.org/t/p/w500/5K7cFAo161UuM6TP8F4NLM8yUq.jpg" },
+            { id: 13, title: "Spider-Man: Into the Spider-Verse", year: "2018", genre: "Animation", director: "Peter Ramsey", rating: 8.4, plot: "Teen Miles Morales becomes the Spider-Man of his universe, and must join with five spider-powered individuals from other dimensions to stop a threat for all realities.", poster: "https://image.tmdb.org/t/p/w500/xnopI5Xtky18MPhK40cZAGAOVeV.jpg" },
+            { id: 14, title: "Arrival", year: "2016", genre: "Sci-Fi", director: "Denis Villeneuve", rating: 7.9, plot: "A linguist works with the military to communicate with alien lifeforms after twelve mysterious spacecraft appear around the world.", poster: "https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63C3cTpK64pXPvx.jpg" },
+            { id: 15, title: "The Good, the Bad and the Ugly", year: "1966", genre: "Western", director: "Sergio Leone", rating: 8.8, plot: "A bounty hunting scam joins two men in an uneasy alliance against a third in a race to find a fortune in gold buried in a remote cemetery.", poster: "https://image.tmdb.org/t/p/w500/bX2xnavhMYjWDoZp1VM6VnU1xwe.jpg" },
+            { id: 16, title: "Everything Everywhere All At Once", year: "2022", genre: "Action", director: "The Daniels", rating: 8.0, plot: "A middle-aged Chinese immigrant is swept up into an insane adventure in which she alone can save the existence by exploring other universes and connecting with the lives she could have led.", poster: "https://image.tmdb.org/t/p/w500/rKvCys0f9xukWNxaWGNwZ0I1hY3.jpg" },
+            { id: 17, title: "Fight Club", year: "1999", genre: "Drama", director: "David Fincher", rating: 8.8, plot: "An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.", poster: "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg" },
+            { id: 18, title: "Back to the Future", year: "1985", genre: "Sci-Fi", director: "Robert Zemeckis", rating: 8.5, plot: "Marty McFly, a 17-year-old high school student, is accidentally sent thirty years into the past in a time-traveling DeLorean invented by his close friend, the eccentric scientist Doc Brown.", poster: "https://image.tmdb.org/t/p/w500/fNOH9f1aA7XRTzl1sAQL9jeRF.jpg" },
+            { id: 19, title: "Oldboy", year: "2003", genre: "Thriller", director: "Park Chan-wook", rating: 8.4, plot: "After being kidnapped and imprisoned for fifteen years, Oh Dae-Su is released, only to find that he must find his captor in five days.", poster: "https://image.tmdb.org/t/p/w500/pWDtjs568Zf45vZvnNzZkpWwwJ0.jpg" },
+            { id: 20, title: "Akira", year: "1988", genre: "Animation", director: "Katsuhiro Otomo", rating: 8.0, plot: "A secret military project endangers Neo-Tokyo when it turns a biker gang member into a rampaging psychic psychopath who can only be stopped by two teenagers and a group of psychics.", poster: "https://image.tmdb.org/t/p/w500/neZ0UVfEHeZ1VpMTfQJ8OqZtZg.jpg" }
+        ];
+
+        // TMDB uses numbers for genres; this maps them to names.
+        const genreMap = { 28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western" };
+
+        const loadingMessages = [
+            "Thinking...",
+            "Picking the best...",
+            "Choosing...",
+            "Consulting the archives...",
+            "Ohh here comes a boring movie...",
+            "Rolling the dice...",
+            "Loading the reel..."
+        ];
+
+        // --- APP STATE ---
+        let movieDatabase = [...localDatabase]; // Start with local
+        let currentMovie = null;
+        let userData = {
+            watched: [],
+            skipped: [],
+            watchlist: []
+        };
+        let isApiConnected = false;
+        let apiPage = 1;
+        let loadingInterval;
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+            checkApiStatus();
+            updateStats();
+            lucide.createIcons();
+        });
+
+        function checkApiStatus() {
+            if (TMDB_API_KEY && TMDB_API_KEY.length > 10) {
+                isApiConnected = true;
+                document.getElementById('api-light').classList.replace('bg-gray-500', 'bg-green-500');
+                document.getElementById('api-light').classList.add('shadow-[0_0_8px_#00ff00]');
+                document.getElementById('api-text').innerText = "TMDB CONNECTED";
+                document.getElementById('api-text').classList.add('text-green-500');
+            }
+        }
+
+        function loadUserData() {
+            const stored = localStorage.getItem('retroCinemaData');
+            if (stored) {
+                userData = JSON.parse(stored);
+            }
+        }
+
+        function saveUserData() {
+            localStorage.setItem('retroCinemaData', JSON.stringify(userData));
+            updateStats();
+        }
+
+        // --- API FETCHING ---
+        async function fetchMoviesFromApi() {
+            if (!isApiConnected) return false;
+
+            try {
+                // Fetch Top Rated movies. Randomize page to get variety.
+                // TMDB has about 500 pages of top rated movies.
+                const randomPage = Math.floor(Math.random() * 50) + 1; 
+                const url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${TMDB_API_KEY}&language=en-US&page=${randomPage}`;
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('API Error');
+                
+                const data = await response.json();
+                
+                // Transform TMDB format to Our App format
+                const newMovies = data.results.map(m => ({
+                    id: m.id,
+                    title: m.title,
+                    year: m.release_date ? m.release_date.split('-')[0] : '????',
+                    genre: m.genre_ids[0] ? genreMap[m.genre_ids[0]] : 'Cinema',
+                    director: "Unknown", 
+                    rating: m.vote_average.toFixed(1),
+                    plot: m.overview,
+                    // Use a clean dark placeholder if path is null
+                    poster: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : 'https://placehold.co/500x750/111/444?text=Poster+Not+Available'
+                }));
+
+                // Add to database ensuring no duplicates
+                newMovies.forEach(movie => {
+                    if (!movieDatabase.find(existing => existing.id === movie.id)) {
+                        movieDatabase.push(movie);
+                    }
+                });
+
+                return true;
+
+            } catch (error) {
+                console.error("Failed to fetch from TMDB", error);
+                return false;
+            }
+        }
+
+        // --- CORE LOGIC ---
+
+        function startLoadingAnimation() {
+            const textEl = document.getElementById('loading-text');
+            let index = 0;
+            textEl.innerText = loadingMessages[0];
+            
+            if (loadingInterval) clearInterval(loadingInterval);
+            
+            loadingInterval = setInterval(() => {
+                index = (index + 1) % loadingMessages.length;
+                textEl.innerText = loadingMessages[index];
+            }, 1800);
+        }
+
+        function stopLoadingAnimation() {
+            if (loadingInterval) clearInterval(loadingInterval);
+        }
+
+        async function startPicker() {
+            toggleView('loading');
+            startLoadingAnimation();
+            
+            // If API is connected, try to fetch fresh movies before picking
+            if (isApiConnected) {
+                await fetchMoviesFromApi();
+            } else {
+                // Fake loading delay for retro feel if local
+                await new Promise(r => setTimeout(r, 2000));
+            }
+            
+            pickRandomMovie();
+        }
+
+        async function pickRandomMovie() {
+            // Filter movies
+            const availableMovies = movieDatabase.filter(m => {
+                return !userData.watched.includes(m.id) &&
+                       !userData.skipped.includes(m.id) &&
+                       !userData.watchlist.includes(m.id);
+            });
+
+            if (availableMovies.length === 0) {
+                // If we ran out AND we have API, fetch more!
+                if (isApiConnected) {
+                    // Animation is already running if we came from startPicker, 
+                    // but if we came from "Next" button, we might need to show loading
+                    toggleView('loading');
+                    startLoadingAnimation();
+                    await fetchMoviesFromApi();
+                    pickRandomMovie(); // Try again
+                    return;
+                }
+                
+                alert("You've gone through the entire database! Resetting local data might help.");
+                toggleView('start');
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * availableMovies.length);
+            currentMovie = availableMovies[randomIndex];
+            
+            // Artificial delay to let the user read the funny loading text if moving fast
+            if(!isApiConnected) await new Promise(r => setTimeout(r, 500));
+            
+            renderMovie(currentMovie);
+            toggleView('movie');
+        }
+
+        function renderMovie(movie) {
+            document.getElementById('movie-title').innerText = movie.title;
+            document.getElementById('movie-year').innerText = movie.year;
+            document.getElementById('movie-genre').innerText = movie.genre;
+            document.getElementById('movie-director').innerText = movie.director === "Unknown" ? "Cast & Crew" : movie.director;
+            document.getElementById('movie-rating').innerText = movie.rating;
+            document.getElementById('movie-plot').innerText = movie.plot;
+            
+            const posterImg = document.getElementById('movie-poster');
+            posterImg.src = movie.poster;
+            
+            // Just in case the image fails to load even with the placeholder check
+            posterImg.onerror = function() {
+                this.src = 'https://placehold.co/500x750/111/444?text=No+Poster';
+            };
+        }
+
+        function handleAction(action) {
+            if (!currentMovie) return;
+
+            if (action === 'watched') {
+                userData.watched.push(currentMovie.id);
+            } else if (action === 'skip') {
+                userData.skipped.push(currentMovie.id);
+            } else if (action === 'watchlist') {
+                // Check if already in watchlist (prevent duplicates)
+                if (!userData.watchlist.includes(currentMovie.id)) {
+                     userData.watchlist.push(currentMovie.id);
+                }
+            }
+
+            saveUserData();
+            
+            const card = document.querySelector('#movie-view > div');
+            card.style.transform = 'scale(0.95) opacity(0.5)';
+            setTimeout(() => {
+                card.style.transform = 'scale(1) opacity(1)';
+                pickRandomMovie();
+            }, 200);
+        }
+
+        function updateStats() {
+            // Update total based on API status
+            if (isApiConnected) {
+                document.getElementById('stat-total').innerHTML = "&infin;"; // Infinity symbol
+            } else {
+                document.getElementById('stat-total').innerText = movieDatabase.length;
+            }
+            
+            document.getElementById('stat-seen').innerText = userData.watched.length;
+            document.getElementById('watchlist-count').innerText = userData.watchlist.length;
+        }
+
+        // --- WATCHLIST & NAVIGATION ---
+        function renderWatchlist() {
+            const grid = document.getElementById('watchlist-grid');
+            grid.innerHTML = '';
+            
+            const listItems = userData.watchlist.map(id => {
+                return movieDatabase.find(m => m.id === id) || { 
+                    id: id, title: "Unknown Movie (Data Lost)", year: "??", genre: "?", poster: "https://placehold.co/100x150/111/444?text=?" 
+                };
+            });
+            
+            if (listItems.length === 0) {
+                document.getElementById('empty-watchlist-msg').classList.remove('hidden');
+            } else {
+                document.getElementById('empty-watchlist-msg').classList.add('hidden');
+                
+                listItems.forEach(movie => {
+                    const el = document.createElement('div');
+                    el.className = 'flex bg-gray-900 border border-gray-700 rounded p-2 gap-3 items-center';
+                    el.innerHTML = `
+                        <img src="${movie.poster}" class="w-12 h-16 object-cover rounded bg-gray-800">
+                        <div class="flex-grow min-w-0">
+                            <h4 class="text-white font-bold truncate">${movie.title}</h4>
+                            <span class="text-xs text-yellow-600">${movie.year} • ${movie.genre}</span>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="markAsWatchedFromList(${movie.id})" class="p-2 bg-green-900/50 hover:bg-green-600 text-green-400 hover:text-white rounded transition-colors">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeFromWatchlist(${movie.id})" class="p-2 bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white rounded transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(el);
+                });
+                lucide.createIcons();
+            }
+        }
+
+        function removeFromWatchlist(id) {
+            userData.watchlist = userData.watchlist.filter(movieId => movieId !== id);
+            saveUserData();
+            renderWatchlist();
+        }
+
+        function markAsWatchedFromList(id) {
+            userData.watchlist = userData.watchlist.filter(movieId => movieId !== id);
+            userData.watched.push(id);
+            saveUserData();
+            renderWatchlist();
+        }
+
+        function toggleView(viewName) {
+            const views = ['start', 'movie', 'watchlist', 'loading'];
+            
+            // Stop animation if leaving loading view
+            if (viewName !== 'loading') stopLoadingAnimation();
+            
+            views.forEach(v => {
+                const el = document.getElementById(`${v}-view`);
+                if (v === viewName) {
+                    el.classList.remove('hidden');
+                    if(v === 'watchlist') renderWatchlist();
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
