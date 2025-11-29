@@ -13,9 +13,7 @@ Retro Cinema Picker is a lightweight, single-file web application designed to so
 
 ## 🚀 Live Demo
 
-> Replace this link after you deploy to GitHub Pages
-
-[View Live Demo](#)
+[View Live Demo](https://shyam-gitbot.github.io/cinematic/)
 
 ## 🛠️ Setup & Installation
 
