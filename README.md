@@ -12,7 +12,10 @@ Retro Cinema Picker is a lightweight, single-file web application designed to so
 - **🧠 Smart Filtering:** Automatically excludes movies you've already seen or skipped
 
 ## 🚀 Demo
-[▶️ Watch the demo](./demo.mp4)
+<video width="600" controls>
+  <source src="./demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 [View Live Demo](https://shyam-gitbot.github.io/cinematic/)
 
