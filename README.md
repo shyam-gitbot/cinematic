@@ -1,4 +1,4 @@
-# Retro Cinema Picker 🎬
+# Retro Movie Picker 🎬
 
 Retro Cinema Picker is a lightweight, single-file web application designed to solve the "what should I watch?" dilemma. Wrapped in a nostalgic, 80s-style CRT interface, it randomly selects high-rated movies for you, allowing you to track what you've seen, skip what you dislike, and build a watchlist.
 
